@@ -1,0 +1,406 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Salary Predictor</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@400;700;900&family=Outfit:wght@300;400;500&family=Space+Mono&display=swap" rel="stylesheet"/>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:     #03050a;
+      --panel:  #080d14;
+      --card:   #0c1320;
+      --border: rgba(255,255,255,0.07);
+      --blue:   #4f8eff;
+      --cyan:   #00d4ff;
+      --text:   #dce8f5;
+      --muted:  #4a5a72;
+      --green:  #22c55e;
+      --err:    #ff5c6e;
+    }
+
+    body {
+      font-family: 'Outfit', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 2rem;
+    }
+
+    .rings {
+      position: fixed; inset: 0;
+      display: flex; align-items: center; justify-content: center;
+      pointer-events: none; z-index: 0;
+    }
+    .ring {
+      position: absolute; border-radius: 50%;
+      border: 1px solid rgba(79,142,255,0.06);
+      animation: pulse 4s ease-in-out infinite;
+    }
+    .ring:nth-child(1) { width:280px;  height:280px; }
+    .ring:nth-child(2) { width:480px;  height:480px; animation-delay:.5s; }
+    .ring:nth-child(3) { width:680px;  height:680px; animation-delay:1s; }
+    @keyframes pulse {
+      0%,100% { opacity:.4; transform:scale(1); }
+      50%      { opacity:.9; transform:scale(1.02); }
+    }
+    .glow {
+      position: fixed;
+      width: 500px; height: 500px;
+      background: radial-gradient(circle, rgba(79,142,255,0.1) 0%, transparent 70%);
+      top:50%; left:50%; transform:translate(-50%,-50%);
+      pointer-events:none; z-index:0;
+    }
+
+    .page {
+      position: relative; z-index: 1;
+      width: 100%; max-width: 480px;
+      display: flex; flex-direction: column; gap: 1.8rem;
+      animation: up .6s ease both;
+    }
+    @keyframes up {
+      from { opacity:0; transform:translateY(20px); }
+      to   { opacity:1; transform:translateY(0); }
+    }
+
+    .head { text-align: center; }
+    .eyebrow {
+      font-family: 'Space Mono', monospace;
+      font-size: .6rem; letter-spacing: .22em;
+      text-transform: uppercase; color: var(--blue);
+      margin-bottom: .9rem;
+    }
+    h1 {
+      font-family: 'Unbounded', sans-serif;
+      font-size: clamp(1.6rem,5vw,2.2rem);
+      font-weight: 700; letter-spacing: -.04em; line-height: 1.15;
+    }
+    h1 span {
+      background: linear-gradient(90deg, var(--blue), var(--cyan));
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    .sub { margin-top:.7rem; font-size:.88rem; color:var(--muted); font-weight:300; line-height:1.6; }
+
+    .card {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 16px; padding: 2.2rem;
+      position: relative; overflow: hidden;
+    }
+    .card::before {
+      content:'';
+      position:absolute; top:0; left:0; right:0; height:1px;
+      background: linear-gradient(90deg, transparent, rgba(79,142,255,.4), transparent);
+    }
+
+    label {
+      display: block;
+      font-family: 'Space Mono', monospace;
+      font-size: .62rem; letter-spacing: .14em;
+      text-transform: uppercase; color: var(--muted);
+      margin-bottom: .65rem;
+    }
+
+    .row { display: flex; gap: .75rem; }
+
+    input[type="number"] {
+      flex: 1;
+      padding: .95rem 1.1rem;
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      font-family: 'Unbounded', sans-serif;
+      font-size: 1.3rem; font-weight: 400;
+      color: var(--text); outline: none;
+      transition: border-color .2s, box-shadow .2s;
+      -moz-appearance: textfield;
+      appearance: textfield;
+    }
+    input[type="number"]::-webkit-inner-spin-button,
+    input[type="number"]::-webkit-outer-spin-button { display:none; }
+    input[type="number"]::placeholder { color:var(--muted); font-size:1rem; }
+    input[type="number"]:focus {
+      border-color: rgba(79,142,255,.5);
+      box-shadow: 0 0 0 3px rgba(79,142,255,.1);
+    }
+
+    button {
+      padding: .95rem 1.5rem;
+      background: linear-gradient(135deg, var(--blue), #2563eb);
+      color: #fff; border: none; border-radius: 10px;
+      font-family: 'Unbounded', sans-serif;
+      font-size: .7rem; font-weight: 700; letter-spacing: .04em;
+      cursor: pointer; white-space: nowrap;
+      display: flex; align-items: center; gap: .5rem;
+      transition: opacity .2s, transform .12s, box-shadow .2s;
+    }
+    button:hover { opacity:.9; box-shadow:0 6px 24px rgba(79,142,255,.35); transform:translateY(-1px); }
+    button:active { transform:scale(.97); }
+    button:disabled { opacity:.4; cursor:not-allowed; transform:none; box-shadow:none; }
+
+    .hint {
+      font-family: 'Space Mono', monospace;
+      font-size: .6rem; color: var(--muted);
+      margin-top: .55rem; letter-spacing: .04em;
+    }
+
+    .err {
+      background: rgba(255,92,110,.08);
+      border: 1px solid rgba(255,92,110,.25);
+      color: var(--err);
+      padding: .75rem 1rem; border-radius: 8px;
+      font-size: .82rem; margin-top: 1rem;
+      display: none; line-height: 1.7;
+      white-space: pre-line;
+    }
+
+    .result {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 16px; padding: 2.2rem;
+      position: relative; overflow: hidden;
+      display: none;
+      animation: up .4s ease both;
+    }
+    .result::before {
+      content:'';
+      position:absolute; top:0; left:0; right:0; height:2px;
+      background: linear-gradient(90deg, var(--blue), var(--cyan));
+    }
+    .r-label {
+      font-family: 'Space Mono', monospace;
+      font-size: .58rem; letter-spacing: .2em;
+      text-transform: uppercase; color: var(--blue);
+      margin-bottom: 1rem;
+    }
+    .r-salary {
+      font-family: 'Unbounded', sans-serif;
+      font-size: clamp(2.5rem,8vw,3.6rem);
+      font-weight: 700; letter-spacing: -.05em; line-height: 1;
+      background: linear-gradient(90deg,#fff 30%, var(--cyan) 100%);
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+      background-clip: text;
+      opacity: 0; transform: translateY(10px);
+      transition: opacity .5s ease, transform .5s ease;
+    }
+    .r-salary.show { opacity:1; transform:translateY(0); }
+    .r-per { font-size:.78rem; color:var(--muted); margin-top:.4rem; font-weight:300; letter-spacing:.06em; }
+    .r-meta {
+      margin-top: 1.4rem; padding-top: 1.4rem;
+      border-top: 1px solid var(--border);
+      display: flex; align-items: center; gap: .6rem;
+      font-family: 'Space Mono', monospace;
+      font-size: .65rem; color: var(--muted);
+    }
+    .dot {
+      width:7px; height:7px; border-radius:50%;
+      background: var(--cyan); flex-shrink:0;
+      box-shadow: 0 0 8px var(--cyan);
+    }
+
+    .spin {
+      width:14px; height:14px;
+      border: 2px solid rgba(255,255,255,.2);
+      border-top-color:#fff; border-radius:50%;
+      animation: rot .65s linear infinite; flex-shrink:0;
+    }
+    @keyframes rot { to { transform:rotate(360deg); } }
+
+    .status-bar {
+      display: flex; align-items: center; justify-content: center; gap: .5rem;
+      font-family: 'Space Mono', monospace;
+      font-size: .6rem; color: var(--muted);
+    }
+    .status-dot {
+      width: 7px; height: 7px; border-radius: 50%;
+      background: var(--muted); transition: background .3s;
+    }
+    .status-dot.online  { background: var(--green); box-shadow: 0 0 6px var(--green); }
+    .status-dot.offline { background: var(--err);   box-shadow: 0 0 6px var(--err); }
+
+    .foot {
+      text-align:center;
+      font-family:'Space Mono', monospace;
+      font-size:.58rem; letter-spacing:.1em;
+      text-transform:uppercase; color:var(--muted);
+    }
+    .foot b { color:var(--blue); }
+  </style>
+</head>
+<body>
+
+<div class="rings">
+  <div class="ring"></div><div class="ring"></div><div class="ring"></div>
+</div>
+<div class="glow"></div>
+
+<div class="page">
+
+  <div class="head">
+    <h1>Salary <span>Predictor</span></h1>
+    <p class="sub">Enter years of experience — the ML model predicts your expected annual salary.</p>
+  </div>
+
+  <!-- Live API status indicator -->
+  <div class="status-bar">
+    <div class="status-dot" id="statusDot"></div>
+    <span id="statusText">Checking API...</span>
+  </div>
+
+  <div class="card">
+    <label for="expInput">Years of Experience</label>
+    <div class="row">
+      <input
+        type="number"
+        id="expInput"
+        placeholder="e.g. 5"
+        min="0" max="50"
+         step="0.5"
+        autocomplete="off"
+      />
+      <button id="btn" onclick="predictSalary()">Predict</button>
+    </div>
+    <p class="hint">Enter a number between 0 – 50 &nbsp;·&nbsp; Decimals ok (e.g. 3.5)</p>
+    <div class="err" id="errBox"></div>
+  </div>
+
+  <div class="result" id="resultCard">
+    <div class="r-label">Predicted Annual Salary</div>
+    <div class="r-salary" id="rSalary"></div>
+    <div class="r-per">per month · INR</div>
+    <div class="r-meta">
+      <span class="dot"></span>
+      <span id="rMeta"></span>
+    </div>
+  </div>
+
+  <div class="foot">
+    FastAPI · scikit-learn ·
+    <b>POST http://127.0.0.1:8000/predict</b>
+  </div>
+
+</div>
+
+<script>
+  // =====================================================================
+  //  CONFIGURATION
+  //  If your FastAPI runs on a different port, change it here only.
+  // =====================================================================
+  const API_URL    = "http://127.0.0.1:8000/predict";
+  const HEALTH_URL = "http://127.0.0.1:8000";
+
+  // ── Check API status when page loads ─────────────────────────────────
+  async function checkAPI() {
+    const dot = document.getElementById("statusDot");
+    const txt = document.getElementById("statusText");
+    try {
+      const res = await fetch(HEALTH_URL, { signal: AbortSignal.timeout(3000) });
+      if (res.ok) {
+        dot.className = "status-dot online";
+        txt.textContent = "API online · http://127.0.0.1:8000";
+      } else { throw new Error(); }
+    } catch {
+      dot.className = "status-dot offline";
+      txt.textContent = "API offline — open terminal and run: uvicorn main:app --reload";
+    }
+  }
+  checkAPI();
+
+  // ── Main predict function ─────────────────────────────────────────────
+  async function predictSalary() {
+    const btn     = document.getElementById("btn");
+    const errBox  = document.getElementById("errBox");
+    const resCard = document.getElementById("resultCard");
+    errBox.style.display = "none";
+
+    const raw = document.getElementById("expInput").value.trim();
+
+    // Client-side validation
+    if (raw === "") {
+      return showErr("Please enter your years of experience.");
+    }
+    const years = parseFloat(raw);
+    if (isNaN(years)) {
+      return showErr("Please enter a valid number (e.g. 5 or 3.5).");
+    }
+    if (years < 0 || years > 50) {
+      return showErr("Experience must be between 0 and 50 years.");
+    }
+
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spin"></span>';
+
+    try {
+      // API call — field name must match your FastAPI InputData class
+      const response = await fetch(API_URL, {
+        method : "POST",
+        headers: { "Content-Type": "application/json" },
+        body   : JSON.stringify({ YearsExperience: years })
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.detail || data.error || "Server returned an error");
+      }
+
+      const salary = data.PredictedSalary ?? data.predictedSalary ?? data.predicted_salary ?? data.salary;
+      if (salary === undefined || salary === null || Number.isNaN(Number(salary))) {
+        throw new Error("Invalid salary returned from API");
+      }
+
+      resCard.style.display = "block";
+
+      const salaryEl = document.getElementById("rSalary");
+      salaryEl.classList.remove("show");
+
+      salaryEl.textContent = "₹" + Math.round(salary).toLocaleString("en-IN");
+
+      document.getElementById("rMeta").textContent =
+        years + " year" + (years === 1 ? "" : "s") + " of experience";
+      setTimeout(() => salaryEl.classList.add("show"), 30);
+
+      document.getElementById("statusDot").className = "status-dot online";
+      document.getElementById("statusText").textContent = "API online · prediction successful ✓";
+
+    } catch (e) {
+      resCard.style.display = "none";
+      if (e.message.includes("Failed to fetch") || e.message.includes("NetworkError") || e.message.includes("fetch")) {
+        showErr(
+          "❌ Cannot reach the API.\n\n" +
+          "Make sure you have run this command in your terminal:\n\n" +
+          "  uvicorn main:app --reload\n\n" +
+          "Then refresh this page and try again."
+        );
+        document.getElementById("statusDot").className = "status-dot offline";
+        document.getElementById("statusText").textContent = "API offline";
+      } else {
+        showErr("Error: " + e.message);
+      }
+    } finally {
+      btn.disabled = false;
+      btn.innerHTML = "Predict";
+    }
+  }
+
+  function showErr(msg) {
+    const el = document.getElementById("errBox");
+    el.textContent = msg;
+    el.style.display = "block";
+  }
+
+  // Press Enter to submit
+  document.getElementById("expInput").addEventListener("keydown", e => {
+    if (e.key === "Enter") predictSalary();
+  });
+</script>
+</body>
+</html>
